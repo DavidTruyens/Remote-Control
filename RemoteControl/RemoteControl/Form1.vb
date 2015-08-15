@@ -53,25 +53,20 @@ Public Class Form1
 
         If Not arduino Then
             MsgBox("No Arduino can be found..")
-            SerialPortList.Text = SerialPortList.Items.Item(0).ToString
+            'SerialPortList.Text = SerialPortList.Items.Item(0).ToString
             Me.BackColor = Color.Orange
 
         End If
 
-        If arduino Then
-            connect()
-        End If
-
     End Sub
 
-    Private Sub connect()
+    Public Sub connect()
         Dim portname As String
         portname = "COM" & GetPortNumber()
-        'MsgBox(portname)
 
         Try
-            SerialPort1.Portname = portname
-            SerialPort1.BaudRate = 9600
+            SerialPort1.PortName = portname
+            SerialPort1.BaudRate = My.Settings.LatestBaudRate
             SerialPort1.Open()
             Me.BackColor = Color.Green
 
@@ -90,29 +85,44 @@ Public Class Form1
         Dim closingbracket As String = ")"
         Dim y As Integer = InStr(string_after, closingbracket)
         Dim portnumber As String = string_after.Substring(0, y - 1)
+
         Return portnumber
     End Function
 
-    'Private Sub ButtonDown_Click(sender As Object, e As EventArgs) Handles ButtonDown.Click
-    '    SendMessageW(Me.Handle, WM_APPCOMMAND, Me.Handle, New IntPtr(APPCOMMAND_VOLUME_DOWN))
-    'End Sub
-
-    'Private Sub ButtonUp_Click(sender As Object, e As EventArgs) Handles ButtonUp.Click
-    '    SendMessageW(Me.Handle, WM_APPCOMMAND, Me.Handle, New IntPtr(APPCOMMAND_VOLUME_UP))
-    'End Sub
-
     Private Sub SerialPort1_DataRecieved(sender As Object, e As SerialDataReceivedEventArgs) Handles SerialPort1.DataReceived
         Dim StringOut As String
-        StringOut = SerialPort1.ReadLine
+        Try
+            StringOut = SerialPort1.ReadLine
+            Invoke(New StringInput(AddressOf CMDCom), StringOut)
 
-        Invoke(New StringInput(AddressOf CMDCom), StringOut)
+        Catch ex As Exception
+            MsgBox("Check BaudRate")
+
+        End Try
     End Sub
 
     Private Sub CMDCom(ByVal StringOut As String)
+        CMDIn.Text = StringOut
         If StringOut.Contains("UP") Then
             SendMessageW(Me.Handle, WM_APPCOMMAND, Me.Handle, New IntPtr(APPCOMMAND_VOLUME_UP))
         ElseIf StringOut.Contains("DOWN") Then
             SendMessageW(Me.Handle, WM_APPCOMMAND, Me.Handle, New IntPtr(APPCOMMAND_VOLUME_DOWN))
         End If
+    End Sub
+
+    Private Sub SettingsButton_Click(sender As Object, e As EventArgs) Handles SettingsButton.Click
+        SerialPort1.Close()
+        My.Forms.Settings.Show()
+    End Sub
+
+    Private Sub SerialPortList_SelectedIndexChanged(sender As Object, e As EventArgs) Handles SerialPortList.SelectedIndexChanged
+        If SerialPort1.IsOpen Then
+            SerialPort1.Close()
+        End If
+        connect()
+    End Sub
+
+    Private Sub SerialPortList_DropDown(sender As Object, e As EventArgs) Handles SerialPortList.DropDown
+        Me.BackColor = Color.Orange
     End Sub
 End Class
